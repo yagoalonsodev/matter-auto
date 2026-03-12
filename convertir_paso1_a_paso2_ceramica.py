@@ -15,6 +15,7 @@ import pandas as pd
 import sys
 import os
 from pathlib import Path
+from datetime import datetime
 
 from dotenv import load_dotenv
 
@@ -330,6 +331,19 @@ def generar_paso2(df_paso1, colores, appearance, typology):
     return pd.DataFrame(filas)[COLUMNAS_PASO2]
 
 
+def carpeta_timestamp():
+    """Carpeta con timestamp: output/ceramica/YYYYMMDD_HHMMSS/. Si existe env OUTPUT_CARPETA se usa esa."""
+    return os.getenv("OUTPUT_CARPETA") or os.path.join("output", "ceramica", datetime.now().strftime("%Y%m%d_%H%M%S"))
+
+
+def slug_nombremarca(nombre):
+    """Convierte nombre de marca/colección a slug para el archivo (sin espacios ni caracteres raros)."""
+    if not nombre or not str(nombre).strip():
+        return "salida"
+    s = re.sub(r"[^a-zA-Z0-9\u00C0-\u024F]+", "_", str(nombre).strip())
+    return (s.strip("_")[:50]) or "salida"
+
+
 def guardar_paso2(df_paso2, archivo_salida):
     dir_salida = os.path.dirname(archivo_salida)
     if dir_salida:
@@ -341,15 +355,10 @@ def guardar_paso2(df_paso2, archivo_salida):
 def main():
     if len(sys.argv) < 2:
         print("Uso: python3 convertir_paso1_a_paso2_ceramica.py <entrada.csv|.xlsx> [salida.xlsx]")
-        print("Ejemplo: python3 convertir_paso1_a_paso2_ceramica.py mi_coleccion.csv output/ceramica/paso2.xlsx")
+        print("Ejemplo: python3 convertir_paso1_a_paso2_ceramica.py mi_coleccion.csv")
         sys.exit(1)
 
     archivo_entrada = sys.argv[1]
-    archivo_salida = (
-        sys.argv[2]
-        if len(sys.argv) >= 3
-        else f"output/ceramica/02_Colores_{Path(archivo_entrada).stem}.xlsx"
-    )
 
     sufijo = Path(archivo_entrada).suffix.lower()
     if sufijo == ".csv":
@@ -377,6 +386,15 @@ def main():
     df_paso2 = generar_paso2(df_paso1, colores, appearance, typology)
     print(f"✓ Paso 2 generado: {len(df_paso2)} filas")
 
+    # Carpeta con timestamp y nombre de archivo con _nombremarca
+    carpeta = carpeta_timestamp()
+    os.makedirs(carpeta, exist_ok=True)
+    nombremarca = slug_nombremarca(df_paso1.iloc[0].get("name", ""))
+    if len(sys.argv) >= 3:
+        base = Path(sys.argv[2]).stem
+    else:
+        base = "02_Colores"
+    archivo_salida = os.path.join(carpeta, f"{base}_{nombremarca}.xlsx")
     guardar_paso2(df_paso2, archivo_salida)
     print("Listo.")
 
