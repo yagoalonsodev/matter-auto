@@ -1,0 +1,18 @@
+# Claves y configuración local (no subir)
+.env
+.env.local
+.env.*.local
+
+# Entorno virtual
+venv/
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.eggs/
+dist/
+build/
+
+# Excel/CSV temporales (opcional)
+# output/
